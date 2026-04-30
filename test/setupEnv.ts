@@ -1,0 +1,12 @@
+process.env.NODE_ENV = "test";
+process.env.PORT = "5999";
+process.env.DB_HOST = "localhost";
+process.env.DB_PORT = "5432";
+process.env.DB_USER = "test";
+process.env.DB_PASSWORD = "test";
+process.env.DB_NAME = "test";
+process.env.DB_SYNC = "false";
+process.env.RUN_MIGRATIONS_ON_START = "false";
+process.env.JWT_ACCESS_SECRET = "test-access-secret-minimum-32-chars!!";
+process.env.ACCESS_TOKEN_EXPIRES = "15m";
+process.env.REFRESH_TOKEN_EXPIRES = "7d";

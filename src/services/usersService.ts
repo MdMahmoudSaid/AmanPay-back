@@ -1,0 +1,109 @@
+import bcrypt from "bcrypt";
+import { AppDataSource } from "../config/database";
+import { AppError } from "../common/errors";
+import { User, UserRole } from "../entities/User";
+
+const publicSelect = [
+  "id",
+  "email",
+  "fullName",
+  "phone",
+  "role",
+  "createdAt",
+  "updatedAt",
+] as const;
+
+export type CreateUserInput = {
+  email: string;
+  password: string;
+  fullName: string;
+  phone?: string | null;
+  role?: UserRole;
+};
+
+export type UpdateUserInput = {
+  email?: string;
+  fullName?: string;
+  phone?: string | null;
+  role?: UserRole;
+  password?: string;
+};
+
+export class UsersService {
+  private repo = AppDataSource.getRepository(User);
+
+  async findAll(): Promise<Pick<User, (typeof publicSelect)[number]>[]> {
+    return this.repo.find({ select: [...publicSelect] });
+  }
+
+  async findById(id: number): Promise<Pick<User, (typeof publicSelect)[number]> | null> {
+    return this.repo.findOne({ where: { id }, select: [...publicSelect] });
+  }
+
+  async create(input: CreateUserInput): Promise<Pick<User, (typeof publicSelect)[number]>> {
+    const normalized = input.email.trim().toLowerCase();
+    const existing = await this.repo.findOne({ where: { email: normalized } });
+    if (existing) {
+      throw new AppError(409, "Email already registered", "email_taken");
+    }
+    const passwordHash = await bcrypt.hash(input.password, 10);
+    const user = this.repo.create({
+      email: normalized,
+      passwordHash,
+      fullName: input.fullName.trim(),
+      phone: input.phone ?? null,
+      role: input.role ?? UserRole.USER,
+      passwordResetTokenHash: null,
+      passwordResetExpiresAt: null,
+    });
+    const saved = await this.repo.save(user);
+    const safe = await this.repo.findOne({
+      where: { id: saved.id },
+      select: [...publicSelect],
+    });
+    if (!safe) {
+      throw new AppError(500, "User persist failed", "persist_failed");
+    }
+    return safe;
+  }
+
+  async update(id: number, input: UpdateUserInput): Promise<Pick<User, (typeof publicSelect)[number]>> {
+    const existing = await this.repo.findOne({ where: { id } });
+    if (!existing) {
+      throw new AppError(404, "User not found", "not_found");
+    }
+    if (input.email !== undefined) {
+      const normalized = input.email.trim().toLowerCase();
+      const taken = await this.repo.findOne({ where: { email: normalized } });
+      if (taken && taken.id !== id) {
+        throw new AppError(409, "Email already in use", "email_taken");
+      }
+      existing.email = normalized;
+    }
+    if (input.fullName !== undefined) {
+      existing.fullName = input.fullName.trim();
+    }
+    if (input.phone !== undefined) {
+      existing.phone = input.phone;
+    }
+    if (input.role !== undefined) {
+      existing.role = input.role;
+    }
+    if (input.password !== undefined) {
+      existing.passwordHash = await bcrypt.hash(input.password, 10);
+    }
+    await this.repo.save(existing);
+    const safe = await this.repo.findOne({ where: { id }, select: [...publicSelect] });
+    if (!safe) {
+      throw new AppError(500, "User persist failed", "persist_failed");
+    }
+    return safe;
+  }
+
+  async delete(id: number): Promise<void> {
+    const result = await this.repo.delete(id);
+    if (!result.affected) {
+      throw new AppError(404, "User not found", "not_found");
+    }
+  }
+}
