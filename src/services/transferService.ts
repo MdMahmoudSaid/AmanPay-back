@@ -67,6 +67,8 @@ export class TransferService {
   }
 
   async create(raw: Record<string, unknown>): Promise<Transfer> {
+    // Note: this service assumes caller auth/verification is handled upstream.
+    // It does not perform sender password or biometric checks by design.
     const data = normalizeBody({ ...raw });
     delete data.id;
     const row = this.repo.create(data as never);

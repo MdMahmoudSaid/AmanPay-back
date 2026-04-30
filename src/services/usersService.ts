@@ -3,7 +3,8 @@ import { AppDataSource } from "../config/database";
 import { AppError } from "../common/errors";
 import { User, UserRole } from "../entities/User";
 
-const publicSelect = [
+/** Admin users resource exposes internal numeric `id` (not auth public UUID). */
+const adminUserSelect = [
   "id",
   "email",
   "fullName",
@@ -32,15 +33,15 @@ export type UpdateUserInput = {
 export class UsersService {
   private repo = AppDataSource.getRepository(User);
 
-  async findAll(): Promise<Pick<User, (typeof publicSelect)[number]>[]> {
-    return this.repo.find({ select: [...publicSelect] });
+  async findAll(): Promise<Pick<User, (typeof adminUserSelect)[number]>[]> {
+    return this.repo.find({ select: [...adminUserSelect] });
   }
 
-  async findById(id: number): Promise<Pick<User, (typeof publicSelect)[number]> | null> {
-    return this.repo.findOne({ where: { id }, select: [...publicSelect] });
+  async findById(id: number): Promise<Pick<User, (typeof adminUserSelect)[number]> | null> {
+    return this.repo.findOne({ where: { id }, select: [...adminUserSelect] });
   }
 
-  async create(input: CreateUserInput): Promise<Pick<User, (typeof publicSelect)[number]>> {
+  async create(input: CreateUserInput): Promise<Pick<User, (typeof adminUserSelect)[number]>> {
     const normalized = input.email.trim().toLowerCase();
     const existing = await this.repo.findOne({ where: { email: normalized } });
     if (existing) {
@@ -59,7 +60,7 @@ export class UsersService {
     const saved = await this.repo.save(user);
     const safe = await this.repo.findOne({
       where: { id: saved.id },
-      select: [...publicSelect],
+      select: [...adminUserSelect],
     });
     if (!safe) {
       throw new AppError(500, "User persist failed", "persist_failed");
@@ -67,7 +68,7 @@ export class UsersService {
     return safe;
   }
 
-  async update(id: number, input: UpdateUserInput): Promise<Pick<User, (typeof publicSelect)[number]>> {
+  async update(id: number, input: UpdateUserInput): Promise<Pick<User, (typeof adminUserSelect)[number]>> {
     const existing = await this.repo.findOne({ where: { id } });
     if (!existing) {
       throw new AppError(404, "User not found", "not_found");
@@ -93,7 +94,7 @@ export class UsersService {
       existing.passwordHash = await bcrypt.hash(input.password, 10);
     }
     await this.repo.save(existing);
-    const safe = await this.repo.findOne({ where: { id }, select: [...publicSelect] });
+    const safe = await this.repo.findOne({ where: { id }, select: [...adminUserSelect] });
     if (!safe) {
       throw new AppError(500, "User persist failed", "persist_failed");
     }

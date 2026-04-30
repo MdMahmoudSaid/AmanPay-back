@@ -40,11 +40,43 @@ npx typeorm-ts-node-commonjs migration:generate src/migrations/DescribeChange -d
 | POST | `/auth/refresh` | No — body `{ "refreshToken" }` |
 | POST | `/auth/logout` | No — body `{ "refreshToken" }` (revokes) |
 | GET | `/users/me` | Bearer access token |
+| GET | `/users/lookup-recipient?identifier=...` | Bearer access token |
 | POST | `/users/update-password` | Bearer access token — body `{ "currentPassword", "newPassword" }` |
+| GET | `/resources/envelopes` | Bearer access token |
+| GET | `/resources/partners` | Bearer access token |
+| POST | `/resources/transfers` | Bearer access token |
 
 Optional first admin: set `SEED_DEFAULT_ADMIN=true` plus `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`.
 
 In non-production mode, `/auth/forgot-password` returns `resetToken` in the JSON response for local testing. In production, send this token by email instead.
+
+## Auth and identifier conventions
+
+- `POST /auth/login` accepts:
+  - `identifier` (preferred): email or phone number.
+  - `email` (legacy/deprecated): still accepted for older clients.
+  - `password` (required).
+- Phone login normalizes input to digits (`+213 555...` and `213555...` are treated the same).
+- Login by `referenceId` is intentionally not supported.
+
+### User IDs in responses
+
+- `id`: public UUID (`users.public_id`) intended for client-facing display.
+- `dbUserId`: internal numeric primary key (`users.id`) for server-side relations.
+- `referenceId`: short human-friendly recipient handle used in lookup/transfer flows.
+
+### Recipient lookup
+
+`GET /users/lookup-recipient?identifier=...` resolves recipient by:
+1. email (if `identifier` contains `@`);
+2. otherwise `referenceId` or normalized phone digits.
+
+Returns `404` with code `recipient_not_found` when no match exists.
+
+### Transfer endpoint scope
+
+- `POST /resources/transfers` is a resource-layer create endpoint.
+- Sender credential re-check (password/biometric) is expected to be enforced by the caller flow before hitting this endpoint.
 
 ## Docker
 

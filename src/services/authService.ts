@@ -24,6 +24,12 @@ function parseDurationToMs(spec: string): number {
   return n * mul;
 }
 
+/**
+ * Public user payload returned by auth/profile endpoints.
+ * - `id`: stable public UUID (`users.public_id`) for client-facing use.
+ * - `dbUserId`: internal numeric primary key (`users.id`) for server-side relations.
+ * - `referenceId`: short transfer handle intended for recipient lookup flows.
+ */
 export type PublicUser = {
   id: string;
   dbUserId: number;
@@ -232,6 +238,7 @@ export class AuthService {
       return u ? toPublicUser(u) : null;
     }
     const digits = normalizePhoneDigits(q);
+    // Non-email identifiers can match either referenceId (exact) or normalized phone digits.
     const u = await this.userRepo
       .createQueryBuilder("u")
       .select([
