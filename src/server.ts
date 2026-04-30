@@ -2,7 +2,6 @@ import "reflect-metadata";
 import { loadEnv } from "./config/env";
 import { createApp } from "./app";
 import { AppDataSource } from "./config/database";
-import { seedDefaultAdmin } from "./utils/seedDefaultAdmin";
 
 async function main() {
   const env = loadEnv();
@@ -15,8 +14,6 @@ async function main() {
     const executed = await AppDataSource.runMigrations();
     logger.info({ count: executed.length }, "Migrations executed");
   }
-
-  await seedDefaultAdmin();
 
   app.listen(env.PORT, () => {
     logger.info({ port: env.PORT }, "Server listening");

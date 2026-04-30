@@ -26,7 +26,7 @@ export class UnblockRequest {
   @Column({ type: "text" })
   reason!: string;
 
-  @Column({ length: 64 })
+  @Column({ type: "varchar", length: 64 })
   status!: string;
 
   @Column({ name: "requested_at", type: "timestamp" })

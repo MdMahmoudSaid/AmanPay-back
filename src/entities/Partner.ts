@@ -13,13 +13,13 @@ export class Partner {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ length: 255 })
+  @Column({ type: "varchar", length: 255 })
   name!: string;
 
-  @Column({ length: 128 })
+  @Column({ type: "varchar", length: 128 })
   type!: string;
 
-  @Column({ length: 512 })
+  @Column({ type: "varchar", length: 512 })
   location!: string;
 
   @CreateDateColumn({ name: "created_at" })

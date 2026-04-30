@@ -21,10 +21,10 @@ export class MoneyRequest {
   @Column({ type: "decimal", precision: 14, scale: 2 })
   amount!: string;
 
-  @Column({ length: 128 })
+  @Column({ type: "varchar", length: 128 })
   category!: string;
 
-  @Column({ length: 64 })
+  @Column({ type: "varchar", length: 64 })
   status!: string;
 
   @Column({ name: "requested_at", type: "timestamp" })

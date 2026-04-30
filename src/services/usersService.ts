@@ -32,6 +32,18 @@ export type UpdateUserInput = {
 
 export class UsersService {
   private repo = AppDataSource.getRepository(User);
+  private async generateReferenceId(): Promise<string> {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    for (let tries = 0; tries < 8; tries += 1) {
+      let ref = "";
+      for (let i = 0; i < 10; i += 1) {
+        ref += alphabet[Math.floor(Math.random() * alphabet.length)];
+      }
+      const exists = await this.repo.findOne({ where: { referenceId: ref }, select: ["id"] });
+      if (!exists) return ref;
+    }
+    throw new AppError(500, "Could not generate unique reference id", "reference_generation_failed");
+  }
 
   async findAll(): Promise<Pick<User, (typeof adminUserSelect)[number]>[]> {
     return this.repo.find({ select: [...adminUserSelect] });
@@ -50,6 +62,7 @@ export class UsersService {
     const passwordHash = await bcrypt.hash(input.password, 10);
     const user = this.repo.create({
       email: normalized,
+      referenceId: await this.generateReferenceId(),
       passwordHash,
       fullName: input.fullName.trim(),
       phone: input.phone ?? null,

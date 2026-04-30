@@ -29,16 +29,16 @@ export class User {
   @Generated("uuid")
   publicId!: string;
 
-  @Column({ unique: true, length: 255 })
+  @Column({ type: "varchar", unique: true, length: 255 })
   email!: string;
 
-  @Column({ name: "reference_id", unique: true, length: 10 })
+  @Column({ name: "reference_id", type: "varchar", unique: true, length: 10 })
   referenceId!: string;
 
-  @Column({ name: "password_hash", length: 255 })
+  @Column({ name: "password_hash", type: "varchar", length: 255 })
   passwordHash!: string;
 
-  @Column({ name: "full_name", length: 255 })
+  @Column({ name: "full_name", type: "varchar", length: 255 })
   fullName!: string;
 
   @Column({ name: "phone", type: "varchar", length: 50, nullable: true })

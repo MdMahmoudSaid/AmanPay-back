@@ -21,7 +21,7 @@ export class Wallet {
   @Column({ name: "total_balance", type: "decimal", precision: 14, scale: 2, default: 0 })
   totalBalance!: string;
 
-  @Column({ length: 10, default: "EUR" })
+  @Column({ type: "varchar", length: 10, default: "EUR" })
   currency!: string;
 
   @CreateDateColumn({ name: "created_at" })

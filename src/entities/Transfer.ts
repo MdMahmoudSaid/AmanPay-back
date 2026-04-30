@@ -30,10 +30,10 @@ export class Transfer {
   @Column({ name: "occurred_at", type: "timestamp" })
   occurredAt!: Date;
 
-  @Column({ length: 64 })
+  @Column({ type: "varchar", length: 64 })
   type!: string;
 
-  @Column({ length: 64 })
+  @Column({ type: "varchar", length: 64 })
   status!: string;
 
   @CreateDateColumn({ name: "created_at" })

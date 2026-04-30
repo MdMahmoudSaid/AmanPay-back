@@ -13,7 +13,7 @@ export class Invoice {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ length: 128 })
+  @Column({ type: "varchar", length: 128 })
   reference!: string;
 
   @Column({ type: "decimal", precision: 14, scale: 2 })
@@ -22,7 +22,7 @@ export class Invoice {
   @Column({ name: "issued_at", type: "timestamp" })
   issuedAt!: Date;
 
-  @Column({ length: 64 })
+  @Column({ type: "varchar", length: 64 })
   status!: string;
 
   @CreateDateColumn({ name: "created_at" })

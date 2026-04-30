@@ -1,98 +1,93 @@
-# Express TypeScript starter
+# AmanPay API (Backend)
 
-Opinionated API skeleton: **Express 5**, **TypeScript**, **TypeORM (PostgreSQL)**, **JWT access tokens**, **opaque refresh tokens**, **Zod-backed env**, **Helmet**, **rate limiting on `/api/auth`**, **Pino HTTP logs**, **migrations**, and **Jest** smoke tests.
+Express + TypeScript + TypeORM API used by the AmanPay mobile app.
 
-## Quick start
+## Step-by-step local setup
 
-1. Copy `.env.example` to `.env` and set `JWT_ACCESS_SECRET` (32+ characters) and database fields.
-2. Create the PostgreSQL database, then either:
-   - **Recommended:** `DB_SYNC=false`, `RUN_MIGRATIONS_ON_START=true`, run `npm run dev` (migrations apply on boot), or run `npm run migration:run` manually.
-   - **Local only:** `DB_SYNC=true` (never in production).
-3. `npm install` → `npm run dev`.
+### 1) Install dependencies
+
+```bash
+npm install
+```
+
+### 2) Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Update `.env` at minimum:
+
+- `JWT_ACCESS_SECRET` with 32+ random chars
+- `DB_PASSWORD` / `DB_NAME` if needed
+
+Recommended local values:
+
+- `DB_SYNC=false`
+- `RUN_MIGRATIONS_ON_START=true`
+- `SEED_DEFAULT_ADMIN=true`
+- `ADMIN_EMAIL=admin@example.com`
+- `ADMIN_PASSWORD=change-me-8-chars-min`
+
+### 3) Start PostgreSQL + API containers
+
+```bash
+docker compose up --build -d
+docker compose logs -f api
+```
+
+### 4) Seed data (admin + 5 test users)
+
+```bash
+npm run seed
+```
+
+This seed command runs migrations (based on env), then creates:
+
+- optional admin (if `SEED_DEFAULT_ADMIN=true`)
+- 5 test users with wallets
+
+Test users:
+
+- `user1@amanpay.test` / `12345678` / phone `10000001`
+- `user2@amanpay.test` / `12345678` / phone `20000002`
+- `user3@amanpay.test` / `12345678` / phone `30000003`
+- `user4@amanpay.test` / `12345678` / phone `40000004`
+- `user5@amanpay.test` / `12345678` / phone `50000005`
+
+Each test wallet gets a random integer balance between `1000` and `10000` (DB may display as `.00` because column type is decimal).
+
+### 5) Verify backend
+
+- API root: [http://localhost:5000/api](http://localhost:5000/api)
+- Health: [http://localhost:5000/api/health](http://localhost:5000/api/health)
 
 ## Scripts
 
-| Script | Purpose |
-|--------|---------|
-| `npm run dev` | `tsx watch` on `src/server.ts` |
-| `npm run build` / `npm start` | Compile to `dist/`, run compiled server |
-| `npm test` | Jest (no DB required for health test) |
-| `npm run migration:run` | Apply TypeORM migrations |
-| `npm run migration:revert` | Revert last migration |
+- `npm run dev`: start API in watch mode
+- `npm run build`: compile TypeScript
+- `npm start`: run compiled server
+- `npm run seed`: run seeding entrypoint
+- `npm run migration:run`: apply migrations
+- `npm run migration:revert`: revert last migration
+- `npm test`: run tests
 
-Generate a new migration after changing entities (path is the first positional argument):
+## API notes
 
-```bash
-npx typeorm-ts-node-commonjs migration:generate src/migrations/DescribeChange -d src/config/database.ts
-```
+- API prefix is `/api`
+- `POST /auth/login` accepts `identifier` (email or phone) + `password`
+- Public user payload includes:
+  - `id` (public UUID)
+  - `dbUserId` (internal numeric ID)
+  - `referenceId` (human-friendly transfer identifier)
 
-## API (prefix `/api`)
+## Troubleshooting
 
-| Method | Path | Auth |
-|--------|------|------|
-| GET | `/` | No |
-| GET | `/health` | No — liveness |
-| GET | `/health/ready` | No — DB `SELECT 1` |
-| POST | `/auth/register` | No |
-| POST | `/auth/login` | No |
-| POST | `/auth/forgot-password` | No — body `{ "email" }` |
-| POST | `/auth/reset-password` | No — body `{ "resetToken", "newPassword" }` |
-| POST | `/auth/refresh` | No — body `{ "refreshToken" }` |
-| POST | `/auth/logout` | No — body `{ "refreshToken" }` (revokes) |
-| GET | `/users/me` | Bearer access token |
-| GET | `/users/lookup-recipient?identifier=...` | Bearer access token |
-| POST | `/users/update-password` | Bearer access token — body `{ "currentPassword", "newPassword" }` |
-| GET | `/resources/envelopes` | Bearer access token |
-| GET | `/resources/partners` | Bearer access token |
-| POST | `/resources/transfers` | Bearer access token |
-
-Optional first admin: set `SEED_DEFAULT_ADMIN=true` plus `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`.
-
-In non-production mode, `/auth/forgot-password` returns `resetToken` in the JSON response for local testing. In production, send this token by email instead.
-
-## Auth and identifier conventions
-
-- `POST /auth/login` accepts:
-  - `identifier` (preferred): email or phone number.
-  - `email` (legacy/deprecated): still accepted for older clients.
-  - `password` (required).
-- Phone login normalizes input to digits (`+213 555...` and `213555...` are treated the same).
-- Login by `referenceId` is intentionally not supported.
-
-### User IDs in responses
-
-- `id`: public UUID (`users.public_id`) intended for client-facing display.
-- `dbUserId`: internal numeric primary key (`users.id`) for server-side relations.
-- `referenceId`: short human-friendly recipient handle used in lookup/transfer flows.
-
-### Recipient lookup
-
-`GET /users/lookup-recipient?identifier=...` resolves recipient by:
-1. email (if `identifier` contains `@`);
-2. otherwise `referenceId` or normalized phone digits.
-
-Returns `404` with code `recipient_not_found` when no match exists.
-
-### Transfer endpoint scope
-
-- `POST /resources/transfers` is a resource-layer create endpoint.
-- Sender credential re-check (password/biometric) is expected to be enforced by the caller flow before hitting this endpoint.
-
-## Docker
-
-Build and start API + PostgreSQL:
-
-```bash
-docker compose up --build
-```
-
-Then open:
-
-- API: `http://localhost:5000/api`
-- Health: `http://localhost:5000/api/health`
-
-Notes:
-
-- `docker-compose.yml` is env-driven: app/DB names, ports, and image can be changed via `.env`.
-- Compose uses `DB_HOST_DOCKER` (default `postgres`), while local non-docker runs use `DB_HOST` (usually `localhost`).
-- Set `JWT_ACCESS_SECRET` in `.env` before running.
+- `column User.public_id does not exist`:
+  - run `npm run migration:run` then `npm run seed`
+- stale local DB data:
+  ```bash
+  docker compose down -v
+  docker compose up --build -d
+  npm run seed
+  ```

@@ -13,10 +13,10 @@ export class RefreshToken {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Column({ name: "token_hash", unique: true, length: 64 })
+  @Column({ name: "token_hash", type: "varchar", unique: true, length: 64 })
   tokenHash!: string;
 
-  @Column({ name: "user_id" })
+  @Column({ name: "user_id", type: "int" })
   userId!: number;
 
   @ManyToOne(() => User, (u) => u.refreshTokens, { onDelete: "CASCADE" })

@@ -17,7 +17,7 @@ export class ActivityHistory {
   @JoinColumn({ name: "user_id" })
   user!: User;
 
-  @Column({ length: 512 })
+  @Column({ type: "varchar", length: 512 })
   action!: string;
 
   @Column({ name: "occurred_at", type: "timestamp" })

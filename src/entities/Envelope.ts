@@ -21,13 +21,13 @@ export class Envelope {
   @JoinColumn({ name: "transfer_id" })
   transfer!: Transfer;
 
-  @Column({ length: 64 })
+  @Column({ type: "varchar", length: 64 })
   type!: string;
 
   @Column({ type: "decimal", precision: 14, scale: 2 })
   amount!: string;
 
-  @Column({ length: 64 })
+  @Column({ type: "varchar", length: 64 })
   status!: string;
 
   @CreateDateColumn({ name: "created_at" })
