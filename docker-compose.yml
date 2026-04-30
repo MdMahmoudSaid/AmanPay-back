@@ -40,6 +40,9 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
 
+    ports:
+      - "${DB_EXPOSE_PORT:-5432}:5432"
+
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
