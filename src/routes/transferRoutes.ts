@@ -6,6 +6,7 @@ const controller = new TransferController();
 
 router.get("/", controller.getAll);
 router.get("/:id", controller.getOne);
+router.post("/simple", controller.createSimple);
 router.post("/", controller.create);
 router.put("/:id", controller.update);
 router.delete("/:id", controller.delete);

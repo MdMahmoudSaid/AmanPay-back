@@ -36,6 +36,18 @@ export class TransferController {
     }
   };
 
+  createSimple = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.auth?.sub) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const created = await this.service.createSimpleTransfer(req.body as Record<string, unknown>, req.auth.sub);
+      res.status(201).json(created);
+    } catch (err) {
+      if (!sendAppError(err, res)) next(err);
+    }
+  };
+
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseIdParam(req.params.id);
