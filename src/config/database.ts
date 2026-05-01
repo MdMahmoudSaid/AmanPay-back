@@ -6,9 +6,7 @@ import { RefreshToken } from "../entities/RefreshToken";
 import { Wallet } from "../entities/Wallet";
 import { Transfer } from "../entities/Transfer";
 import { Envelope } from "../entities/Envelope";
-import { Partner } from "../entities/Partner";
 import { Invoice } from "../entities/Invoice";
-import { PaymentTransaction } from "../entities/PaymentTransaction";
 import { UnblockRequest } from "../entities/UnblockRequest";
 import { MoneyRequest } from "../entities/MoneyRequest";
 import { ActivityHistory } from "../entities/ActivityHistory";
@@ -35,9 +33,7 @@ export const AppDataSource = new DataSource({
     Wallet,
     Transfer,
     Envelope,
-    Partner,
     Invoice,
-    PaymentTransaction,
     UnblockRequest,
     MoneyRequest,
     ActivityHistory,

@@ -9,7 +9,6 @@ import {
   OneToMany,
 } from "typeorm";
 import { Transfer } from "./Transfer";
-import { PaymentTransaction } from "./PaymentTransaction";
 import { UnblockRequest } from "./UnblockRequest";
 
 @Entity("envelopes")
@@ -38,9 +37,6 @@ export class Envelope {
 
   @UpdateDateColumn({ name: "updated_at" })
   updatedAt!: Date;
-
-  @OneToMany(() => PaymentTransaction, (tx) => tx.envelope)
-  transactions?: PaymentTransaction[];
 
   @OneToMany(() => UnblockRequest, (r) => r.envelope)
   unblockRequests?: UnblockRequest[];
