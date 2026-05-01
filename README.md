@@ -29,6 +29,7 @@ Minimum required updates in `.env`:
 Recommended local values:
 - `DB_SYNC=false`
 - `RUN_MIGRATIONS_ON_START=true`
+- `RUN_SEED_ON_START=true`
 - `SEED_DEFAULT_ADMIN=true`
 - `ADMIN_EMAIL=admin@example.com`
 - `ADMIN_PASSWORD=change-me-8-chars-min`
@@ -43,6 +44,8 @@ docker compose logs -f api
 ```bash
 npm run seed
 ```
+
+Note: with `RUN_SEED_ON_START=true`, seeding also runs automatically when the API starts.
 
 Seed includes:
 - optional admin (when `SEED_DEFAULT_ADMIN=true`)
@@ -130,6 +133,7 @@ cp .env.example .env
 القيم الموصى بها محليًا:
 - `DB_SYNC=false`
 - `RUN_MIGRATIONS_ON_START=true`
+- `RUN_SEED_ON_START=true`
 - `SEED_DEFAULT_ADMIN=true`
 - `ADMIN_EMAIL=admin@example.com`
 - `ADMIN_PASSWORD=change-me-8-chars-min`

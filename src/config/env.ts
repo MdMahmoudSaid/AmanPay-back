@@ -21,6 +21,10 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => v !== "false"),
+  RUN_SEED_ON_START: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
   JWT_ACCESS_SECRET: z.string().min(32),
   ACCESS_TOKEN_EXPIRES: z.string().default("15m"),
   REFRESH_TOKEN_EXPIRES: z.string().default("7d"),
@@ -52,6 +56,9 @@ export function loadEnv(): Env {
     if (!data.ADMIN_EMAIL || !data.ADMIN_PASSWORD) {
       throw new Error("SEED_DEFAULT_ADMIN requires ADMIN_EMAIL and ADMIN_PASSWORD");
     }
+  }
+  if (data.RUN_SEED_ON_START && data.NODE_ENV === "production") {
+    throw new Error("RUN_SEED_ON_START must not be enabled in production");
   }
   cached = data;
   return cached;
