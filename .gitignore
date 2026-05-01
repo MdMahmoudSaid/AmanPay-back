@@ -37,3 +37,6 @@ Thumbs.db
 # Optional caches
 .cache/
 .eslintcache
+.env
+node_modules
+dist
