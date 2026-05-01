@@ -8,6 +8,8 @@ const registerSchema = z.object({
   password: z.string().min(8),
   fullName: z.string().min(1).max(255),
   phone: z.string().max(50).optional(),
+  accountType: z.enum(["user", "merchant"]).default("user"),
+  merchantCategory: z.string().max(32).optional(),
 });
 
 const loginSchema = z
@@ -54,9 +56,20 @@ export class AuthController {
         body.email,
         body.password,
         body.fullName,
-        body.phone?.trim() ? body.phone : undefined
+        body.phone?.trim() ? body.phone : undefined,
+        body.accountType,
+        body.merchantCategory?.trim() ? body.merchantCategory : undefined
       );
       res.status(201).json(result);
+    } catch (err) {
+      if (!this.sendKnownError(err, res)) next(err);
+    }
+  };
+
+  merchantCategories = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const rows = await this.service.listMerchantCategories();
+      res.json(rows);
     } catch (err) {
       if (!this.sendKnownError(err, res)) next(err);
     }

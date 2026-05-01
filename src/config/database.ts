@@ -12,6 +12,8 @@ import { PaymentTransaction } from "../entities/PaymentTransaction";
 import { UnblockRequest } from "../entities/UnblockRequest";
 import { MoneyRequest } from "../entities/MoneyRequest";
 import { ActivityHistory } from "../entities/ActivityHistory";
+import { MerchantCategory } from "../entities/MerchantCategory";
+import { CategoryWallet } from "../entities/CategoryWallet";
 import { loadEnv } from "./env";
 
 const env = loadEnv();
@@ -39,9 +41,9 @@ export const AppDataSource = new DataSource({
     UnblockRequest,
     MoneyRequest,
     ActivityHistory,
+    MerchantCategory,
+    CategoryWallet,
   ],
   migrations: [path.join(__dirname, "..", "migrations", `*.${migrationExt}`)],
   subscribers: [],
 });
-
-export default AppDataSource;

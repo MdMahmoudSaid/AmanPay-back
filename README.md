@@ -59,8 +59,8 @@ Each test wallet gets a random integer balance between `1000` and `10000` (DB ma
 
 ### 5) Verify backend
 
-- API root: [http://localhost:5000/api](http://localhost:5000/api)
-- Health: [http://localhost:5000/api/health](http://localhost:5000/api/health)
+- API root: [http://localhost:3000/api](http://localhost:3000/api)
+- Health: [http://localhost:3000/api/health](http://localhost:3000/api/health)
 
 ## Scripts
 

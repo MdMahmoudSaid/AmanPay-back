@@ -14,10 +14,17 @@ import { Transfer } from "./Transfer";
 import { UnblockRequest } from "./UnblockRequest";
 import { MoneyRequest } from "./MoneyRequest";
 import { ActivityHistory } from "./ActivityHistory";
+import { CategoryWallet } from "./CategoryWallet";
 
 export enum UserRole {
   ADMIN = "admin",
   USER = "user",
+  MERCHANT = "merchant",
+}
+
+export enum UserStatus {
+  ACTIVE = "active",
+  SUSPENDED = "suspended",
 }
 
 @Entity("users")
@@ -46,6 +53,12 @@ export class User {
 
   @Column({ type: "enum", enum: UserRole, default: UserRole.USER })
   role!: UserRole;
+
+  @Column({ type: "varchar", length: 16, default: UserStatus.ACTIVE })
+  status!: UserStatus;
+
+  @Column({ name: "merchant_category", type: "varchar", length: 32, nullable: true })
+  merchantCategory!: string | null;
 
   @Column({ name: "password_reset_token_hash", type: "varchar", length: 64, nullable: true })
   passwordResetTokenHash!: string | null;
@@ -79,4 +92,7 @@ export class User {
 
   @OneToMany(() => ActivityHistory, (h) => h.user)
   activityHistory?: ActivityHistory[];
+
+  @OneToMany(() => CategoryWallet, (w) => w.user)
+  categoryWallets?: CategoryWallet[];
 }

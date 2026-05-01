@@ -5,8 +5,10 @@ import { IsNull } from "typeorm";
 import { AppDataSource } from "../config/database";
 import { loadEnv } from "../config/env";
 import { AppError } from "../common/errors";
-import { User, UserRole } from "../entities/User";
+import { User, UserRole, UserStatus } from "../entities/User";
 import { RefreshToken } from "../entities/RefreshToken";
+import { MerchantCategory } from "../entities/MerchantCategory";
+import { CategoryWalletService } from "./categoryWalletService";
 import type { SignOptions } from "jsonwebtoken";
 import type { AccessTokenClaims } from "../types/auth";
 
@@ -38,6 +40,8 @@ export type PublicUser = {
   fullName: string;
   phone: string | null;
   role: UserRole;
+  status: UserStatus;
+  merchantCategory: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -56,17 +60,31 @@ function toPublicUser(user: User): PublicUser {
     fullName: user.fullName,
     phone: user.phone ?? null,
     role: user.role,
+    status: user.status,
+    merchantCategory: user.merchantCategory ?? null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
 }
 
 export class AuthService {
-  private async generateReferenceId(): Promise<string> {
+  private merchantCategoryRepo = AppDataSource.getRepository(MerchantCategory);
+  private categoryWalletService = new CategoryWalletService();
+
+  private async generateReferenceId(role: UserRole, merchantCategory?: string | null): Promise<string> {
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const prefix =
+      role === UserRole.MERCHANT
+        ? (merchantCategory ?? "").trim().toUpperCase().slice(0, 2)
+        : role === UserRole.USER
+          ? "SU"
+          : "AD";
+    if (prefix.length !== 2) {
+      throw new AppError(400, "Merchant category is required", "validation_error");
+    }
     for (let tries = 0; tries < 8; tries += 1) {
-      let ref = "";
-      for (let i = 0; i < 10; i += 1) {
+      let ref = prefix;
+      for (let i = 0; i < 8; i += 1) {
         ref += alphabet[Math.floor(Math.random() * alphabet.length)];
       }
       const exists = await this.userRepo.findOne({ where: { referenceId: ref }, select: ["id"] });
@@ -77,6 +95,15 @@ export class AuthService {
 
   private userRepo = AppDataSource.getRepository(User);
   private refreshRepo = AppDataSource.getRepository(RefreshToken);
+
+  async listMerchantCategories(): Promise<Array<{ code: string; displayName: string }>> {
+    const rows = await this.merchantCategoryRepo.find({
+      where: { isActive: true },
+      order: { code: "ASC" },
+      select: ["code", "displayName"],
+    });
+    return rows.map((row) => ({ code: row.code, displayName: row.displayName }));
+  }
 
   private async issueTokens(user: User): Promise<{ accessToken: string; refreshToken: string }> {
     const env = loadEnv();
@@ -99,7 +126,14 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async register(email: string, password: string, fullName: string, phone?: string | null) {
+  async register(
+    email: string,
+    password: string,
+    fullName: string,
+    phone?: string | null,
+    accountType: "user" | "merchant" = "user",
+    merchantCategory?: string | null
+  ) {
     const normalized = email.trim().toLowerCase();
     const existing = await this.userRepo.findOne({ where: { email: normalized } });
     if (existing) {
@@ -116,18 +150,38 @@ export class AuthService {
         throw new AppError(409, "Phone already registered", "phone_taken");
       }
     }
+    const role = accountType === "merchant" ? UserRole.MERCHANT : UserRole.USER;
+    const normalizedMerchantCategory =
+      role === UserRole.MERCHANT ? (merchantCategory ?? "").trim().toUpperCase() : null;
+    if (role === UserRole.MERCHANT && (!normalizedMerchantCategory || normalizedMerchantCategory.length < 2)) {
+      throw new AppError(400, "merchantCategory is required for merchant users", "merchant_category_required");
+    }
+    if (role === UserRole.MERCHANT && normalizedMerchantCategory) {
+      const categoryExists = await this.merchantCategoryRepo.findOne({
+        where: { code: normalizedMerchantCategory, isActive: true },
+        select: ["id"],
+      });
+      if (!categoryExists) {
+        throw new AppError(400, "Invalid merchant category", "merchant_category_invalid");
+      }
+    }
     const passwordHash = await bcrypt.hash(password, 10);
     const user = this.userRepo.create({
       email: normalized,
-      referenceId: await this.generateReferenceId(),
+      referenceId: await this.generateReferenceId(role, normalizedMerchantCategory),
       passwordHash,
       fullName: fullName.trim(),
       phone: phoneNorm,
-      role: UserRole.USER,
+      role,
+      status: UserStatus.ACTIVE,
+      merchantCategory: normalizedMerchantCategory,
       passwordResetTokenHash: null,
       passwordResetExpiresAt: null,
     });
     await this.userRepo.save(user);
+    if (user.role === UserRole.USER) {
+      await this.categoryWalletService.ensureForUser(user.id);
+    }
     const tokens = await this.issueTokens(user);
     return { user: toPublicUser(user), ...tokens };
   }
@@ -140,6 +194,8 @@ export class AuthService {
     "fullName",
     "phone",
     "role",
+    "status",
+    "merchantCategory",
     "passwordHash",
     "createdAt",
     "updatedAt",
@@ -178,6 +234,9 @@ export class AuthService {
 
     if (!user) {
       throw new AppError(401, "Invalid email or password", "invalid_credentials");
+    }
+    if (user.status !== UserStatus.ACTIVE) {
+      throw new AppError(403, "Account is not active", "account_inactive");
     }
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) {
@@ -219,7 +278,19 @@ export class AuthService {
   async getMe(userId: number): Promise<PublicUser> {
     const user = await this.userRepo.findOne({
       where: { id: userId },
-      select: ["id", "publicId", "referenceId", "email", "fullName", "phone", "role", "createdAt", "updatedAt"],
+      select: [
+        "id",
+        "publicId",
+        "referenceId",
+        "email",
+        "fullName",
+        "phone",
+        "role",
+        "status",
+        "merchantCategory",
+        "createdAt",
+        "updatedAt",
+      ],
     });
     if (!user) {
       throw new AppError(404, "User not found", "user_not_found");
@@ -232,8 +303,20 @@ export class AuthService {
     if (!q) return null;
     if (q.includes("@")) {
       const u = await this.userRepo.findOne({
-        where: { email: q.toLowerCase() },
-        select: ["id", "publicId", "referenceId", "email", "fullName", "phone", "role", "createdAt", "updatedAt"],
+        where: { email: q.toLowerCase(), status: UserStatus.ACTIVE },
+        select: [
+          "id",
+          "publicId",
+          "referenceId",
+          "email",
+          "fullName",
+          "phone",
+          "role",
+          "status",
+          "merchantCategory",
+          "createdAt",
+          "updatedAt",
+        ],
       });
       return u ? toPublicUser(u) : null;
     }
@@ -249,11 +332,16 @@ export class AuthService {
         "u.fullName",
         "u.phone",
         "u.role",
+        "u.status",
+        "u.merchantCategory",
         "u.createdAt",
         "u.updatedAt",
       ])
-      .where("u.referenceId = :ref", { ref: q.toUpperCase() })
-      .orWhere("regexp_replace(COALESCE(u.phone, ''), '[^0-9]', '', 'g') = :digits", { digits })
+      .where("u.status = :status", { status: UserStatus.ACTIVE })
+      .andWhere(
+        "(u.referenceId = :ref OR regexp_replace(COALESCE(u.phone, ''), '[^0-9]', '', 'g') = :digits)",
+        { ref: q.toUpperCase(), digits }
+      )
       .getOne();
     return u ? toPublicUser(u) : null;
   }

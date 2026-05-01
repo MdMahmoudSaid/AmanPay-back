@@ -11,10 +11,14 @@ import invoiceRoutes from "./invoiceRoutes";
 import unblockRequestRoutes from "./unblockRequestRoutes";
 import moneyRequestRoutes from "./moneyRequestRoutes";
 import activityHistoryRoutes from "./activityHistoryRoutes";
+import merchantCategoriesRoutes from "./merchantCategoriesRoutes";
+import categoryWalletRoutes from "./categoryWalletRoutes";
 
 const router = Router();
 
 router.use("/users", authorizeRoles(UserRole.ADMIN), usersCrudRoutes);
+router.use("/merchant-categories", authorizeRoles(UserRole.ADMIN), merchantCategoriesRoutes);
+router.use("/category-wallets", categoryWalletRoutes);
 router.use("/wallets", walletRoutes);
 router.use("/transfers", transferRoutes);
 router.use("/envelopes", envelopeRoutes);

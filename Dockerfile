@@ -17,13 +17,13 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 FROM base AS runner
 ENV NODE_ENV=production
-ENV PORT=5000
+ENV PORT=3000
 
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY package*.json ./
 
 USER node
-EXPOSE 5000
+EXPOSE 3000
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/server.js"]

@@ -1,7 +1,9 @@
 import bcrypt from "bcrypt";
 import { AppDataSource } from "../config/database";
 import { AppError } from "../common/errors";
-import { User, UserRole } from "../entities/User";
+import { User, UserRole, UserStatus } from "../entities/User";
+import { MerchantCategory } from "../entities/MerchantCategory";
+import { CategoryWalletService } from "./categoryWalletService";
 
 /** Admin users resource exposes internal numeric `id` (not auth public UUID). */
 const adminUserSelect = [
@@ -10,6 +12,8 @@ const adminUserSelect = [
   "fullName",
   "phone",
   "role",
+  "status",
+  "merchantCategory",
   "createdAt",
   "updatedAt",
 ] as const;
@@ -20,6 +24,8 @@ export type CreateUserInput = {
   fullName: string;
   phone?: string | null;
   role?: UserRole;
+  status?: UserStatus;
+  merchantCategory?: string | null;
 };
 
 export type UpdateUserInput = {
@@ -27,16 +33,29 @@ export type UpdateUserInput = {
   fullName?: string;
   phone?: string | null;
   role?: UserRole;
+  status?: UserStatus;
+  merchantCategory?: string | null;
   password?: string;
 };
 
 export class UsersService {
   private repo = AppDataSource.getRepository(User);
-  private async generateReferenceId(): Promise<string> {
+  private merchantCategoryRepo = AppDataSource.getRepository(MerchantCategory);
+  private categoryWalletService = new CategoryWalletService();
+  private async generateReferenceId(role: UserRole, merchantCategory?: string | null): Promise<string> {
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const prefix =
+      role === UserRole.MERCHANT
+        ? (merchantCategory ?? "").trim().toUpperCase().slice(0, 2)
+        : role === UserRole.USER
+          ? "SU"
+          : "AD";
+    if (prefix.length !== 2) {
+      throw new AppError(400, "Merchant category is required", "validation_error");
+    }
     for (let tries = 0; tries < 8; tries += 1) {
-      let ref = "";
-      for (let i = 0; i < 10; i += 1) {
+      let ref = prefix;
+      for (let i = 0; i < 8; i += 1) {
         ref += alphabet[Math.floor(Math.random() * alphabet.length)];
       }
       const exists = await this.repo.findOne({ where: { referenceId: ref }, select: ["id"] });
@@ -59,18 +78,38 @@ export class UsersService {
     if (existing) {
       throw new AppError(409, "Email already registered", "email_taken");
     }
+    const role = input.role ?? UserRole.USER;
+    const merchantCategory =
+      role === UserRole.MERCHANT ? (input.merchantCategory ?? "").trim().toUpperCase() : null;
+    if (role === UserRole.MERCHANT && (!merchantCategory || merchantCategory.length < 2)) {
+      throw new AppError(400, "merchantCategory is required for merchant users", "validation_error");
+    }
+    if (role === UserRole.MERCHANT && merchantCategory) {
+      const categoryExists = await this.merchantCategoryRepo.findOne({
+        where: { code: merchantCategory, isActive: true },
+        select: ["id"],
+      });
+      if (!categoryExists) {
+        throw new AppError(400, "Invalid merchant category", "validation_error");
+      }
+    }
     const passwordHash = await bcrypt.hash(input.password, 10);
     const user = this.repo.create({
       email: normalized,
-      referenceId: await this.generateReferenceId(),
+      referenceId: await this.generateReferenceId(role, merchantCategory),
       passwordHash,
       fullName: input.fullName.trim(),
       phone: input.phone ?? null,
-      role: input.role ?? UserRole.USER,
+      role,
+      status: input.status ?? UserStatus.ACTIVE,
+      merchantCategory,
       passwordResetTokenHash: null,
       passwordResetExpiresAt: null,
     });
     const saved = await this.repo.save(user);
+    if (saved.role === UserRole.USER) {
+      await this.categoryWalletService.ensureForUser(saved.id);
+    }
     const safe = await this.repo.findOne({
       where: { id: saved.id },
       select: [...adminUserSelect],
@@ -102,6 +141,27 @@ export class UsersService {
     }
     if (input.role !== undefined) {
       existing.role = input.role;
+    }
+    if (input.status !== undefined) {
+      existing.status = input.status;
+    }
+    if (input.merchantCategory !== undefined) {
+      existing.merchantCategory = input.merchantCategory ? input.merchantCategory.trim().toUpperCase() : null;
+    }
+    if (existing.role === UserRole.MERCHANT && (!existing.merchantCategory || existing.merchantCategory.length < 2)) {
+      throw new AppError(400, "merchantCategory is required for merchant users", "validation_error");
+    }
+    if (existing.role === UserRole.MERCHANT && existing.merchantCategory) {
+      const categoryExists = await this.merchantCategoryRepo.findOne({
+        where: { code: existing.merchantCategory, isActive: true },
+        select: ["id"],
+      });
+      if (!categoryExists) {
+        throw new AppError(400, "Invalid merchant category", "validation_error");
+      }
+    }
+    if (existing.role !== UserRole.MERCHANT) {
+      existing.merchantCategory = null;
     }
     if (input.password !== undefined) {
       existing.passwordHash = await bcrypt.hash(input.password, 10);

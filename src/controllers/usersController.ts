@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { parseIdParam } from "../common/parseIdParam";
-import { UserRole } from "../entities/User";
+import { UserRole, UserStatus } from "../entities/User";
 import { UsersService } from "../services/usersService";
 import { sendAppError } from "./sendAppError";
 
@@ -11,6 +11,8 @@ const createSchema = z.object({
   fullName: z.string().min(1).max(255),
   phone: z.string().max(50).optional().nullable(),
   role: z.nativeEnum(UserRole).optional(),
+  status: z.nativeEnum(UserStatus).optional(),
+  merchantCategory: z.string().max(32).optional().nullable(),
 });
 
 const patchSchema = z.object({
@@ -18,6 +20,8 @@ const patchSchema = z.object({
   fullName: z.string().min(1).max(255).optional(),
   phone: z.string().max(50).nullable().optional(),
   role: z.nativeEnum(UserRole).optional(),
+  status: z.nativeEnum(UserStatus).optional(),
+  merchantCategory: z.string().max(32).nullable().optional(),
   password: z.string().min(8).optional(),
 });
 

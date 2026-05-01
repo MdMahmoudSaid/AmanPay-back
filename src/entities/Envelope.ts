@@ -30,6 +30,9 @@ export class Envelope {
   @Column({ type: "varchar", length: 64 })
   status!: string;
 
+  @Column({ type: "varchar", length: 16, default: "dynamic" })
+  mode!: string;
+
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;
 
