@@ -11,6 +11,7 @@ import moneyRequestRoutes from "./moneyRequestRoutes";
 import activityHistoryRoutes from "./activityHistoryRoutes";
 import merchantCategoriesRoutes from "./merchantCategoriesRoutes";
 import categoryWalletRoutes from "./categoryWalletRoutes";
+import assistantRoutes from "./assistantRoutes";
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use("/invoices", invoiceRoutes);
 router.use("/unblock-requests", unblockRequestRoutes);
 router.use("/money-requests", moneyRequestRoutes);
 router.use("/activity-history", activityHistoryRoutes);
+router.use("/assistant", assistantRoutes);
 
 export default router;

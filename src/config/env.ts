@@ -57,7 +57,7 @@ export function loadEnv(): Env {
       throw new Error("SEED_DEFAULT_ADMIN requires ADMIN_EMAIL and ADMIN_PASSWORD");
     }
   }
-  if (data.RUN_SEED_ON_START && data.NODE_ENV === "production") {
+  if (data.NODE_ENV === "production" && data.RUN_SEED_ON_START) {
     throw new Error("RUN_SEED_ON_START must not be enabled in production");
   }
   cached = data;
